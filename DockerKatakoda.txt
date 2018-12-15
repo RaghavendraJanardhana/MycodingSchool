@@ -1,0 +1,283 @@
+Docker & Containers
+
+Scn1:-
+What is A container is a sandboxed process
+docker search reids
+docker run d <image name>  | Where d is detached mode i.e running in the background .
+docker run -d redis:3.2.    | if you install the specific version of the image  execute the image as entioned 
+docker run -d redis:latest  | it releases the latest version of the mentioned software 
+docker ps | this command is used to list the running container.
+docker inspect <docker id or friendlyname > | it gives the more details about the docker like IP address and more 
+		information of that perticulor container .
+docker logs <friendly-name |docker ID> | it display the generated the logs
+ -p <host-port>:<container-port> 
+docker run -d --name redisHostPort -p 6379:6379 redis:latest
+-p 127.0.0.1:6379:6379
+docker port <friendly name> <protnumber>  | it gives the ip address of that particulor  container ip
+docker rund -d --name redisMapped /opt/docker/data/redis:/data redis | it stores the redis data in the specified path
+what is foreground?
+
+docker run ubuntu sh        | this allows to work with shell mode 
+docker run -it ubuntu bash 
+
+
+Scn2:- 
+
+Deploy Static HTML Website as Container
+
+The Dockerfile is a list of instructions describing how to deploy your application.
+Nginx. This provides the configured web server on the Linux Alpine distribution.
+
+---- Simple Dockerfile ----
+
+FROM nginx:alpine   -> Base image 
+COPY . /usr/share/nginx/html   -> copies the content of the current directory into a particular location inside the container.
+
+------------------------------
+The Dockerfile is used by the Docker CLI build command.
+
+docker build -t <tagname or versionnumber>   example :- The Dockerfile is used by the Docker CLI build command.
+docker images 
+Once started, you'll be able to access the results of port 80 via
+
+
+Scn 3:- 
+
+Building Container Images
+
+Dockerfile's are simple text files with a command on each line. To define a base image we use the instruction
+FROM <image-name>:<tag>
+RUN <Commands >
+COPY  <source> <destination>
+Example  COPY index.html /usr/share/nginx/html/index.html
+Using the EXPOSE <port> command you tell Docker which ports should be open and can be bound too. You can define multiple ports on the single command, for example, EXPOSE 80 433 or EXPOSE 7000-8000
+
+An alternative approach to CMD is ENTRYPOINT. While a CMD can be overridden when the container starts, a ENTRYPOINT defines a command which can have arguments passed to it when the container launches.
+
+In this example, NGINX would be the entrypoint with -g daemon off; the default command.
+
+CMD ["nginx","-g","daemon off";]
+
+Scn 4:- 
+Docker - Dockerizing Node.js applications
+We can define a working directory using WORKDIR <directory> to ensure that all future commands are executed from the directory relative to our application.
+
+If you don't want to use the cache as part of the build then set the option --no-cache=true as part of the docker build command.
+COPY . <destination>
+EXPOSE 80
+CMD ["npm","start"]
+
+-------------------  Simple node-js application Dockerfile --------------------
+
+# This is your Editor pane. Write the Dockerfile here and 
+# use the command line to execute commands
+FROM node:10-alpine
+RUN mkdir -p /src/app
+WORKDIR /src/app
+COPY package.json /src/app/package.json
+
+RUN npm install
+COPY . /src/app
+EXPOSE 3000
+CMD ["npm","start"]
+----------------------------------------------------------------------------------
+Environment variable in docker 
+docker run -d --name my-production-running-app -e NODE_ENV=production -p 3000:3000 my-nodejs-app
+
+ONBUILD -----
+
+FROM node:7
+RUN mkdir -p /usr/src/app
+WORKDIR /usr/src/app
+ONBUILD COPY package.json /usr/src/app/
+ONBUILD RUN npm install
+ONBUILD COPY . /usr/src/app
+CMD [ "npm", "start" ]
+----------
+
+scn 5
+
+To prevent sensitive files or directories from being included by mistake in images, you can add a file named .dockerignore.
+
+
+echo passwords.txt >> .dockerignore
+
+
+Scn :- 
+Communicating Between Containers     
+docker run --link redis-server:redis  alpine env 
+You can output the containers host entry using cat /etc/hosts
+or
+docker run --link  redis-server:redis alpine cat /etc/hosts
+docker run --link  redis-server:redis alpine ping -c 1 redis 
+docker run -d -p 3000:3000 --link redis-server:redis katacoda/redis-node-docker-example
+curl docker:3000
+docker run -it --link redis-server:redis redis redis-cli -h redis
+KEYS *
+QUIT 
+
+
+Scn :- Docker - Docker Networks
+docker network create backend-network 
+docker run -d --name=redis --net=backend-network redis
+docker run --net=backend-network alpine env;
+docker run --net=backend-network alpine cat  /etc/hosts;
+docker run --net=backend-network alpine cat /etc/resolv.conf
+docker run  --net=backend-network alpine ping -c1 redis 
+
+
+docker network create fronend-network
+docker network connect frontend-network redis 
+docker run -d -p 3000:3000 --net=frontend-network katacoda/redis-node-docker-example 
+curl docker:3000;
+
+docker network crate frontend-network2
+docker network connect --alias db frontend-network2 redis
+docker run --net=frontend-network2 alpine ping -c1 db
+
+
+docker network ls 
+docker network inspect <network-name>
+docker network disconnect <network-name> redis
+
+
+
+Scn :- 
+
+Persisting Data Using Volumes
+docker run -v /docker/redis-data:/data \--name r1 -d redis \redis-server --appendonly yes 
+ls /docker/redis-data
+docker run  -v /docker/redis-data:/backup ubuntu ls /backup 
+cat data | docker exec -i r1 redis-cli --pipe
+docker run --volumes-from r1 -it ubuntu ls /data
+docker run -v /docker/redis-data:/data:ro -it ubuntu rm -rf /data
+
+
+Scn : -
+
+Managing Log Files
+docker logs <container name>
+
+enabling the system log :- 
+docker run -d --name redis-syslog --log-driver=syslog redis;
+
+disabling the system log :- 
+docker run -d --name redis-none --log-driver=none redis; 
+
+
+docker loger format 
+
+docker inspect --format '{{.HostConfig.LogConfig}}' redis-server
+docker inspect --format '{{.HostConfig.LogConfig}}' redis-syslog
+docker inspect --format '{{.HostConfig.LogConfig}}' redis-none
+
+
+Scn :- 
+Docker - Ensuring Uptime
+
+docker run -d --name restart-default  scrapbook/docker-restart-example 
+docker ps -a
+docker logs restart-default
+
+docker run -d --name restart-3 --restart=on-failure:3  scrapbook/docker-restart-example 
+
+docker run -d --name restart-always --restart=always scrapbook/docker-restart-example
+docker logs restart-always
+
+Scn:- Docker Metadata & Labels
+
+docker run -l user=12345 -d redis;
+echo 'user=123456' >> labels && echo 'role=cache' >>labels
+docker run --label-file=labels -d redis 
+LABEL vendor=Katacoda 
+
+LABEL vendor=Katacoda \ com.katacoda.version=0.0.5 \ com.katacoda.build-date=2016-07-01T10:47:29Z \ com.katacoda.course=Docker
+
+docker inspect rd -> display the running container information
+docker  inspect -f "{{json Config.Labels}}" rd
+docker inspect -f "{{json  ContainerConfig.Labels}}" katakoda-label-example 
+
+filter the container based on the label.
+docker ps --filter "label=user=katakoda"
+docker images --filter "label=user=katakoda"
+
+docker -d \
+  -H unix:///var/run/docker.sock \
+  --label com.katacoda.environment="production" \
+  --label com.katacoda.storage="ssd"
+  
+Scn :- 
+
+Docker - Load Balancing Containers
+docker run -d -p 80:80 -e DEFAULT_HOST=proxy.example -v /var/run/docker.sock:/tmp/docker.sock:ro --name nginx jwilder/nginx-proxy
+
+
+
+Scn :- 
+Orchestration using docker compose 
+
+docker-compose.yaml
+
+
+------
+web:
+  build: .
+
+  ports:
+    - "3000"
+    - "8000"
+
+redis:
+  image: redis:alpine
+  volumes:
+    - /var/redis/data:/data
+------
+docker-compose ps
+docker-compose logs
+docker-compose up 
+docker-compose down
+docker-compose stop 
+docker-compose rm
+docker-compose scale web=3
+docker-compose scale  web=1
+
+
+Scn:-
+
+Docker - Docker Stats
+
+Docker stats nginx
+
+
+Scn :- 
+
+Creating optimised Docker Images using Multi-Stage Builds
+
+--- Example  -----
+
+# First Stage
+FROM golang:1.6-alpine
+
+RUN mkdir /app
+ADD . /app/
+WORKDIR /app
+RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o main .
+
+# Second Stage
+FROM alpine
+EXPOSE 80
+CMD ["/app"]
+
+# Copy from first stage
+COPY --from=0 /app/main /app
+------------------------------------------
+
+docker build -f Dockerfile.multi -t golang-app .
+
+
+Scn :-
+
+Docker - Formatting PS Output
+docker ps --fromat '{{.Name}} container is using the {{.Image }} Image';
+docker ps --format 'table {{.Names}}\t{{.Image}}';
+
